@@ -24,6 +24,13 @@ const STATUS_LABELS: Record<AttendanceStatus, string> = {
 };
 
 type FilterValue = "all" | "unmarked" | AttendanceStatus;
+const FILTERS: { value: FilterValue; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "unmarked", label: "Not marked" },
+  { value: "present", label: "Present" },
+  { value: "absent", label: "Absent" },
+  { value: "informed", label: "Informed" },
+];
 
 export function MeetingAttendance({
   meetingId,
@@ -105,16 +112,16 @@ export function MeetingAttendance({
   }, [groupRows]);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex gap-1 rounded-lg bg-ink-100 p-1 dark:bg-ink-800">
+    <div className="flex flex-col gap-6">
+      <div className="flex gap-1 rounded-md border border-line bg-surface p-1">
         {(["coordinator", "core_member"] as MemberGroup[]).map((g) => (
           <button
             key={g}
             onClick={() => setActiveTab(g)}
-            className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`eyebrow flex-1 rounded-md px-3 py-2 transition-colors ${
               activeTab === g
-                ? "bg-white text-ink-900 shadow-sm dark:bg-ink-700 dark:text-ink-100"
-                : "text-ink-600 hover:text-ink-900 dark:text-ink-400"
+                ? "bg-brand-600 text-ink-950"
+                : "text-muted hover:bg-surface-muted"
             }`}
           >
             {GROUP_LABELS[g]}
@@ -122,22 +129,24 @@ export function MeetingAttendance({
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="rounded-full bg-green-100 px-2.5 py-1 font-medium text-green-800">
-          {counts.present} Present
-        </span>
-        <span className="rounded-full bg-red-100 px-2.5 py-1 font-medium text-red-800">
-          {counts.absent} Absent
-        </span>
-        <span className="rounded-full bg-brand-100 px-2.5 py-1 font-medium text-brand-800">
-          {counts.informed} Informed
-        </span>
-        <span className="rounded-full bg-ink-200 px-2.5 py-1 font-medium text-ink-700 dark:bg-ink-800 dark:text-ink-300">
-          {counts.unmarked} Not marked
-        </span>
-      </div>
-
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="sticky top-0 z-10 -mx-5 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-page/90 px-5 py-3 backdrop-blur-sm sm:mx-0 sm:rounded-md sm:border sm:px-4">
+        <div className="flex flex-wrap gap-1.5">
+          {FILTERS.map((f) => (
+            <button
+              key={f.value}
+              onClick={() =>
+                setFilter((prev) => ({ ...prev, [activeTab]: f.value }))
+              }
+              className={`eyebrow rounded-md px-3 py-1.5 ${
+                filter[activeTab] === f.value
+                  ? "bg-brand-600 text-ink-950"
+                  : "text-muted hover:bg-surface-muted"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
         <input
           type="text"
           placeholder="Search name or roll no..."
@@ -145,47 +154,42 @@ export function MeetingAttendance({
           onChange={(e) =>
             setSearch((s) => ({ ...s, [activeTab]: e.target.value }))
           }
-          className="flex-1 rounded-lg border border-ink-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-ink-700 dark:bg-ink-800"
+          className="input max-w-xs"
         />
-        <select
-          value={filter[activeTab]}
-          onChange={(e) =>
-            setFilter((f) => ({
-              ...f,
-              [activeTab]: e.target.value as FilterValue,
-            }))
-          }
-          className="rounded-lg border border-ink-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-ink-700 dark:bg-ink-800"
-        >
-          <option value="all">All</option>
-          <option value="unmarked">Not marked</option>
-          <option value="present">Present</option>
-          <option value="absent">Absent</option>
-          <option value="informed">Informed</option>
-        </select>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-ink-200 bg-white shadow-sm dark:border-ink-800 dark:bg-ink-900">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="badge bg-emerald-50 text-emerald-800 ring-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-800">
+          {counts.present} Present
+        </span>
+        <span className="badge bg-red-50 text-red-800 ring-red-300 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-800">
+          {counts.absent} Absent
+        </span>
+        <span className="badge bg-brand-50 text-brand-800 ring-brand-300 dark:bg-brand-900/40 dark:text-brand-300 dark:ring-brand-700">
+          {counts.informed} Informed
+        </span>
+        <span className="badge bg-surface-muted text-muted ring-line">
+          {counts.unmarked} Not marked
+        </span>
+      </div>
+
+      <div className="card overflow-hidden">
         {visibleRows.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-ink-500">
+          <p className="px-5 py-8 text-center text-sm text-muted">
             No members match this search/filter.
           </p>
         ) : (
-          <ul className="divide-y divide-ink-100 dark:divide-ink-800">
+          <ul className="divide-y divide-line">
             {visibleRows.map((r) => (
               <li
                 key={r.id}
-                className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-3 px-5 py-3 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div>
-                  <p className="text-sm font-medium text-ink-900 dark:text-ink-100">
-                    {r.full_name}
-                  </p>
-                  <p className="text-xs text-ink-500">{r.roll_no}</p>
+                  <p className="text-sm font-medium text-body">{r.full_name}</p>
+                  <p className="font-mono text-xs text-muted">{r.roll_no}</p>
                   {errorId === r.id && (
-                    <p className="text-xs text-red-600">
-                      Could not save — try again.
-                    </p>
+                    <p className="field-error">Could not save — try again.</p>
                   )}
                 </div>
                 <div className="flex gap-1.5">
@@ -195,14 +199,14 @@ export function MeetingAttendance({
                         key={status}
                         disabled={pendingId === r.id}
                         onClick={() => mark(r.id, status)}
-                        className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+                        className={`eyebrow rounded-md px-3 py-1.5 transition-colors disabled:opacity-50 ${
                           r.status === status
                             ? status === "present"
-                              ? "bg-green-600 text-white"
+                              ? "bg-emerald-600 text-white"
                               : status === "absent"
                               ? "bg-red-600 text-white"
-                              : "bg-brand-600 text-white"
-                            : "bg-ink-100 text-ink-700 hover:bg-ink-200 dark:bg-ink-800 dark:text-ink-300"
+                              : "bg-brand-500 text-ink-950"
+                            : "bg-surface-muted text-muted hover:text-body"
                         }`}
                       >
                         {STATUS_LABELS[status]}

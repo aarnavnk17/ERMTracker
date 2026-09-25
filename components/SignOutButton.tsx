@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export function SignOutButton() {
+export function SignOutButton({ dark = false }: { dark?: boolean }) {
   const router = useRouter();
 
   async function handleSignOut() {
@@ -16,7 +16,11 @@ export function SignOutButton() {
   return (
     <button
       onClick={handleSignOut}
-      className="rounded-lg px-3 py-1.5 text-sm text-ink-600 hover:bg-ink-100 dark:text-ink-400 dark:hover:bg-ink-800"
+      className={
+        dark
+          ? "eyebrow rounded-md px-2.5 py-1.5 text-brand-300/70 hover:bg-ink-800 hover:text-brand-300"
+          : "eyebrow rounded-md px-2.5 py-1.5 text-muted hover:bg-surface-muted"
+      }
     >
       Sign out
     </button>

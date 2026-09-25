@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { NewMeetingForm } from "./new-meeting-form";
+import { SlotMeter } from "@/components/SlotMeter";
+import { StatusBadge } from "@/components/StatusBadge";
 
 export default async function MeetingsPage() {
   const supabase = await createClient();
@@ -23,64 +25,87 @@ export default async function MeetingsPage() {
   for (const r of records ?? []) {
     markedCounts.set(r.meeting_id, (markedCounts.get(r.meeting_id) ?? 0) + 1);
   }
+  const total = totalActive ?? 0;
+  const list = meetings ?? [];
+  const fullyMarked = list.filter((m) => (markedCounts.get(m.id) ?? 0) >= total).length;
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="font-display text-lg font-semibold tracking-tight text-ink-900 dark:text-ink-100">
-        Meetings
-      </h1>
+    <div className="flex flex-col gap-10">
+      <div className="max-w-2xl">
+        <p className="eyebrow text-brand-600 dark:text-brand-400">Meetings</p>
+        <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight text-balance text-body sm:text-4xl">
+          Meeting attendance
+        </h1>
+        <p className="mt-3 text-base leading-relaxed text-muted">
+          Log a meeting and mark Present, Absent or Informed for each member.
+        </p>
+
+        <dl className="mt-8 grid grid-cols-3 gap-4 border-y border-line py-5">
+          <div>
+            <dt className="eyebrow text-muted">Meetings</dt>
+            <dd className="font-mono text-2xl font-semibold text-body sm:text-3xl">
+              {list.length}
+            </dd>
+          </div>
+          <div>
+            <dt className="eyebrow text-muted">Fully marked</dt>
+            <dd className="font-mono text-2xl font-semibold text-body sm:text-3xl">
+              {fullyMarked}
+            </dd>
+          </div>
+          <div>
+            <dt className="eyebrow text-muted">Active members</dt>
+            <dd className="font-mono text-2xl font-semibold text-body sm:text-3xl">
+              {total}
+            </dd>
+          </div>
+        </dl>
+      </div>
 
       <NewMeetingForm />
 
-      <div className="overflow-hidden rounded-xl border border-ink-200 bg-white shadow-sm dark:border-ink-800 dark:bg-ink-900">
-        <div className="border-b border-ink-100 px-4 py-3 dark:border-ink-800">
-          <h2 className="text-sm font-medium text-ink-900 dark:text-ink-100">
-            Past meetings
-          </h2>
-        </div>
-        {!meetings || meetings.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-ink-500">
-            No meetings yet — create one above to start marking attendance.
+      {list.length === 0 ? (
+        <div className="card px-6 py-16 text-center">
+          <p className="text-base font-medium text-body">No meetings yet</p>
+          <p className="mt-1 text-sm text-muted">
+            Create one above to start marking attendance.
           </p>
-        ) : (
-          <ul className="divide-y divide-ink-100 dark:divide-ink-800">
-            {meetings.map((m) => {
-              const marked = markedCounts.get(m.id) ?? 0;
-              const total = totalActive ?? 0;
-              const full = total > 0 && marked >= total;
-              return (
-                <li key={m.id}>
-                  <Link
-                    href={`/meetings/${m.id}`}
-                    className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-brand-50/60 dark:hover:bg-ink-800"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-ink-900 dark:text-ink-100">
-                        {m.description}
-                      </p>
-                      <p className="text-xs text-ink-500">
-                        {new Date(m.date + "T00:00:00").toLocaleDateString(
-                          undefined,
-                          { year: "numeric", month: "long", day: "numeric" }
-                        )}
-                      </p>
-                    </div>
-                    <span
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
-                        full
-                          ? "bg-brand-100 text-brand-800 dark:bg-brand-900/40 dark:text-brand-300"
-                          : "bg-ink-100 text-ink-700 dark:bg-ink-800 dark:text-ink-300"
-                      }`}
-                    >
-                      {marked} of {total} marked
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {list.map((m, i) => {
+            const marked = markedCounts.get(m.id) ?? 0;
+            const full = total > 0 && marked >= total;
+            return (
+              <Link
+                key={m.id}
+                href={`/meetings/${m.id}`}
+                className={`card card-link flex flex-col gap-4 p-5 ${full ? "card-full" : ""}`}
+                style={
+                  i < 8 ? { animationDelay: `${i * 40}ms` } : undefined
+                }
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-base font-semibold leading-snug text-balance text-body">
+                    {m.description}
+                  </p>
+                  <StatusBadge full={full} />
+                </div>
+                <p className="text-xs text-muted">
+                  {new Date(m.date + "T00:00:00").toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </p>
+                <div className="mt-auto">
+                  <SlotMeter marked={marked} total={total} />
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

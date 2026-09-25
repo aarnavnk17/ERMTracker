@@ -1,7 +1,21 @@
 @import "tailwindcss";
 
-:root {
-  /* warm "brand" gold scale */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --color-ink-50: #f4f6f9;
+  --color-ink-100: #e8ecf2;
+  --color-ink-200: #d3dae5;
+  --color-ink-300: #adb9cc;
+  --color-ink-400: #7e8ba3;
+  --color-ink-500: #5b6883;
+  --color-ink-600: #45516c;
+  --color-ink-700: #333d54;
+  --color-ink-800: #2e2620;
+  --color-ink-900: #1c1712;
+  --color-ink-950: #0c0a09;
+
+  /* antique gold */
   --color-brand-50: #faf3e7;
   --color-brand-100: #f4e6cd;
   --color-brand-200: #e8caa0;
@@ -13,57 +27,167 @@
   --color-brand-800: #6e4a29;
   --color-brand-900: #523620;
 
-  /* cool "ink" neutral scale */
-  --color-ink-50: #f4f6f9;
-  --color-ink-100: #e8ecf2;
-  --color-ink-200: #d3dae5;
-  --color-ink-300: #adb9cc;
-  --color-ink-400: #7e8ba3;
-  --color-ink-500: #5b6883;
-  --color-ink-700: #333d54;
-  --color-ink-800: #2e2620;
-  --color-ink-900: #1c1712;
-  --color-ink-950: #0c0a09;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-outfit), var(--font-manrope), ui-sans-serif, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  --font-wordmark: var(--font-cinzel), var(--font-display), serif;
+  --font-script: var(--font-alex-brush), cursive;
+}
 
+:root {
   --page: var(--color-ink-50);
-  --ink: var(--color-ink-900);
+  --surface: #fff;
+  --surface-muted: var(--color-ink-100);
+  --border: var(--color-ink-200);
+  --text: var(--color-ink-900);
+  --text-muted: var(--color-ink-500);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: var(--color-ink-950);
+    --surface: var(--color-ink-900);
+    --surface-muted: var(--color-ink-800);
+    --border: var(--color-ink-800);
+    --text: var(--color-ink-50);
+    --text-muted: var(--color-ink-400);
+  }
+}
+:root[data-theme="dark"] {
+  --page: var(--color-ink-950);
+  --surface: var(--color-ink-900);
+  --surface-muted: var(--color-ink-800);
+  --border: var(--color-ink-800);
+  --text: var(--color-ink-50);
+  --text-muted: var(--color-ink-400);
 }
 
 @theme inline {
-  --color-brand-50: var(--color-brand-50);
-  --color-brand-100: var(--color-brand-100);
-  --color-brand-200: var(--color-brand-200);
-  --color-brand-300: var(--color-brand-300);
-  --color-brand-400: var(--color-brand-400);
-  --color-brand-500: var(--color-brand-500);
-  --color-brand-600: var(--color-brand-600);
-  --color-brand-700: var(--color-brand-700);
-  --color-brand-800: var(--color-brand-800);
-  --color-brand-900: var(--color-brand-900);
-
-  --color-ink-50: var(--color-ink-50);
-  --color-ink-100: var(--color-ink-100);
-  --color-ink-200: var(--color-ink-200);
-  --color-ink-300: var(--color-ink-300);
-  --color-ink-400: var(--color-ink-400);
-  --color-ink-500: var(--color-ink-500);
-  --color-ink-700: var(--color-ink-700);
-  --color-ink-800: var(--color-ink-800);
-  --color-ink-900: var(--color-ink-900);
-  --color-ink-950: var(--color-ink-950);
-
-  --font-display: var(--font-outfit), var(--font-manrope), ui-sans-serif, sans-serif;
-  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --page: var(--color-ink-950);
-    --ink: var(--color-ink-100);
-  }
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-line: var(--border);
+  --color-body: var(--text);
+  --color-muted: var(--text-muted);
 }
 
 body {
   background: var(--page);
-  color: var(--ink);
+  color: var(--text);
+  font-feature-settings: "ss01" 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes reveal-panel-left {
+  0%,
+  30% {
+    translate: 0 0;
+  }
+  100% {
+    translate: -100% 0;
+  }
+}
+@keyframes reveal-panel-right {
+  0%,
+  30% {
+    translate: 0 0;
+  }
+  100% {
+    translate: 100% 0;
+  }
+}
+@keyframes reveal-logo {
+  0% {
+    opacity: 0;
+    scale: 0.85;
+  }
+  20%,
+  65% {
+    opacity: 1;
+    scale: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.05;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-md border border-line bg-surface transition-[translate,box-shadow] duration-150 ease-out;
+  }
+  .card-link {
+    @apply block shadow-[0_1px_2px_rgba(10,15,26,0.04)] hover:-translate-y-0.5
+      hover:shadow-[0_8px_20px_rgba(10,15,26,0.08)] dark:shadow-none
+      dark:hover:shadow-[0_8px_24px_rgba(0,0,0,0.35)];
+    animation: fade-in-up 400ms ease-out backwards;
+  }
+  .card-urgent {
+    @apply border-l-2 border-l-brand-500;
+  }
+  .card-full {
+    @apply opacity-70 grayscale-[35%];
+  }
+
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2
+      font-mono text-xs font-semibold uppercase tracking-[0.08em]
+      transition-[background-color,border-color,color,scale] duration-150 active:scale-[0.98]
+      disabled:cursor-not-allowed disabled:opacity-55 disabled:active:scale-100;
+  }
+  .btn-primary {
+    @apply bg-brand-500 text-ink-950 hover:bg-brand-400;
+  }
+  .btn-secondary {
+    @apply border border-line bg-surface text-body hover:bg-surface-muted;
+  }
+  .btn-danger {
+    @apply border border-red-300 text-red-700 hover:bg-red-50
+      dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40;
+  }
+
+  .eyebrow {
+    @apply font-mono text-[11px] uppercase tracking-[0.18em];
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-body;
+  }
+  .input {
+    @apply w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-body
+      placeholder:text-muted focus:border-brand-500 focus:outline-none
+      focus:ring-2 focus:ring-brand-500/25;
+  }
+  .field-error {
+    @apply mt-1.5 text-sm text-red-600 dark:text-red-400;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset;
+  }
 }

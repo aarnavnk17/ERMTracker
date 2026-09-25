@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Member, MemberGroup } from "@/lib/types";
+import { Toggle } from "@/components/Toggle";
 
 const GROUP_LABELS: Record<MemberGroup, string> = {
   coordinator: "Team Coordinators",
@@ -86,16 +87,16 @@ export function MembersManager({ initialMembers }: { initialMembers: Member[] })
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex gap-1 rounded-lg bg-ink-100 p-1 dark:bg-ink-800">
+    <div className="flex flex-col gap-6">
+      <div className="flex gap-1 rounded-md border border-line bg-surface p-1">
         {(["coordinator", "core_member"] as MemberGroup[]).map((g) => (
           <button
             key={g}
             onClick={() => setActiveTab(g)}
-            className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`eyebrow flex-1 rounded-md px-3 py-2 transition-colors ${
               activeTab === g
-                ? "bg-white text-ink-900 shadow-sm dark:bg-ink-700 dark:text-ink-100"
-                : "text-ink-600 hover:text-ink-900 dark:text-ink-400"
+                ? "bg-brand-600 text-ink-950"
+                : "text-muted hover:bg-surface-muted"
             }`}
           >
             {GROUP_LABELS[g]}
@@ -103,45 +104,34 @@ export function MembersManager({ initialMembers }: { initialMembers: Member[] })
         ))}
       </div>
 
-      <form
-        onSubmit={handleAdd}
-        className="flex flex-col gap-3 rounded-xl border border-ink-200 bg-white p-4 shadow-sm sm:flex-row sm:items-end dark:border-ink-800 dark:bg-ink-900"
-      >
+      <form onSubmit={handleAdd} className="card flex flex-col gap-4 p-5 sm:flex-row sm:items-end">
         <div className="flex flex-1 flex-col gap-1">
-          <label className="text-sm font-medium text-ink-700 dark:text-ink-300">
-            Name
-          </label>
+          <label className="label">Name</label>
           <input
             type="text"
             required
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            className="w-full rounded-lg border border-ink-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-ink-700 dark:bg-ink-800"
+            className="input"
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-ink-700 dark:text-ink-300">
-            Roll no
-          </label>
+          <label className="label">Roll no</label>
           <input
             type="text"
             required
             value={rollNo}
             onChange={(e) => setRollNo(e.target.value)}
-            className="rounded-lg border border-ink-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-ink-700 dark:bg-ink-800"
+            className="input"
           />
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
-        >
+        {error && <p className="field-error">{error}</p>}
+        <button type="submit" disabled={loading} className="btn-primary">
           {loading ? "Adding..." : `Add to ${GROUP_LABELS[activeTab]}`}
         </button>
       </form>
 
-      <label className="flex items-center gap-2 text-sm text-ink-600 dark:text-ink-400">
+      <label className="flex items-center gap-2 text-sm text-muted">
         <input
           type="checkbox"
           checked={showInactive}
@@ -150,43 +140,44 @@ export function MembersManager({ initialMembers }: { initialMembers: Member[] })
         Show deactivated members
       </label>
 
-      <div className="overflow-hidden rounded-xl border border-ink-200 bg-white shadow-sm dark:border-ink-800 dark:bg-ink-900">
+      <div className="card overflow-x-auto">
         {groupMembers.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-ink-500">
+          <p className="px-5 py-8 text-center text-sm text-muted">
             No members in this group yet.
           </p>
         ) : (
-          <ul className="divide-y divide-ink-100 dark:divide-ink-800">
-            {groupMembers.map((m) => (
-              <li
-                key={m.id}
-                className="flex items-center justify-between gap-3 px-4 py-3"
-              >
-                <div className="flex-1">
-                  <input
-                    defaultValue={m.full_name}
-                    onBlur={(e) => renameMember(m, e.target.value)}
-                    className={`w-full rounded border border-transparent bg-transparent text-sm font-medium hover:border-ink-200 focus:border-brand-400 focus:outline-none dark:hover:border-ink-700 ${
-                      m.is_active
-                        ? "text-ink-900 dark:text-ink-100"
-                        : "text-ink-400 line-through"
-                    }`}
-                  />
-                  <p className="text-xs text-ink-500">{m.roll_no}</p>
-                </div>
-                <button
-                  onClick={() => toggleActive(m)}
-                  className={`rounded-md px-3 py-1.5 text-xs font-medium ${
-                    m.is_active
-                      ? "bg-red-50 text-red-700 hover:bg-red-100"
-                      : "bg-green-50 text-green-700 hover:bg-green-100"
-                  }`}
-                >
-                  {m.is_active ? "Deactivate" : "Reactivate"}
-                </button>
-              </li>
-            ))}
-          </ul>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
+                <th className="py-2 pr-4 pl-5 font-medium">Name</th>
+                <th className="py-2 pr-4 font-medium">Roll No</th>
+                <th className="py-2 pr-5 font-medium">Active</th>
+              </tr>
+            </thead>
+            <tbody>
+              {groupMembers.map((m) => (
+                <tr key={m.id} className="border-b border-line last:border-0">
+                  <td className="py-3 pr-4 pl-5">
+                    <input
+                      defaultValue={m.full_name}
+                      onBlur={(e) => renameMember(m, e.target.value)}
+                      className={`w-full rounded border border-transparent bg-transparent font-medium hover:border-line focus:border-brand-400 focus:outline-none ${
+                        m.is_active ? "text-body" : "text-muted line-through"
+                      }`}
+                    />
+                  </td>
+                  <td className="py-3 pr-4 font-mono text-xs text-muted">{m.roll_no}</td>
+                  <td className="py-3 pr-5">
+                    <Toggle
+                      checked={m.is_active}
+                      onChange={() => toggleActive(m)}
+                      label={m.is_active ? "Deactivate member" : "Reactivate member"}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
     </div>
