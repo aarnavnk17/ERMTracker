@@ -8,14 +8,14 @@ export function PageGlow() {
         className="absolute inset-y-0 left-0 w-1/3"
         style={{
           background:
-            "linear-gradient(to right, rgba(184,135,78,0.14), transparent)",
+            "linear-gradient(to right, rgba(178,30,20,0.16), transparent)",
         }}
       />
       <div
         className="absolute inset-y-0 right-0 w-1/3"
         style={{
           background:
-            "linear-gradient(to left, rgba(184,135,78,0.14), transparent)",
+            "linear-gradient(to left, rgba(178,30,20,0.16), transparent)",
         }}
       />
     </div>

@@ -1,33 +1,30 @@
-function LogoChip() {
-  return (
-    <div className="rounded-md bg-white p-1.5">
-      <div className="flex h-9 w-9 items-center justify-center rounded-sm bg-ink-950 sm:h-12 sm:w-12">
-        <span className="font-wordmark text-xs font-semibold tracking-widest text-brand-300 sm:text-sm">
-          SU
-        </span>
-      </div>
-    </div>
-  );
-}
-
 export function Masthead() {
   return (
     <div className="relative overflow-hidden border-b border-ink-800 bg-ink-950 py-6 sm:py-8">
-      <div className="relative mx-auto grid max-w-5xl grid-cols-3 items-center px-5">
-        <div className="flex justify-start">
-          <LogoChip />
-        </div>
-        <div className="flex flex-col items-center text-center">
-          <p className="font-wordmark text-2xl font-semibold uppercase tracking-[0.3em] text-brand-300 sm:text-4xl">
-            SU ERM Tracker
-          </p>
-          <p className="font-script text-2xl text-brand-400 sm:text-3xl">
-            Be the Change
-          </p>
-        </div>
-        <div className="flex justify-end">
-          <LogoChip />
-        </div>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-16 -top-24 h-72 w-72 rounded-full opacity-60 blur-2xl"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(178,30,20,0.55), rgba(178,30,20,0) 70%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-24 -right-16 h-72 w-72 rounded-full opacity-60 blur-2xl"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(178,30,20,0.55), rgba(178,30,20,0) 70%)",
+        }}
+      />
+      <div className="relative mx-auto flex max-w-5xl flex-col items-center px-5 text-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logo.jpeg"
+          alt="Students Union — Be the Change"
+          className="h-28 w-28 rounded-md object-cover sm:h-40 sm:w-40"
+        />
+        <p className="eyebrow mt-4 text-brand-300/70">ERM Attendance Tracker</p>
       </div>
     </div>
   );
