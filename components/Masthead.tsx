@@ -7,7 +7,11 @@ function LogoChip({ src, alt }: { src: string; alt: string }) {
   );
 }
 
-export function Masthead() {
+export function Masthead({
+  subtitle = "Attendance Tracker",
+}: {
+  subtitle?: React.ReactNode;
+}) {
   return (
     <div className="relative overflow-hidden border-b border-ink-800 bg-ink-950 py-6 sm:py-8">
       <div
@@ -44,7 +48,7 @@ export function Masthead() {
           <p className="font-script text-2xl text-brand-400 sm:text-3xl">
             Be the Change
           </p>
-          <p className="eyebrow mt-2 text-brand-300/70">ERM Attendance Tracker</p>
+          <p className="eyebrow mt-2 text-brand-300/70">{subtitle}</p>
         </div>
 
         <div className="flex items-center gap-3">

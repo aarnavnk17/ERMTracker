@@ -1,7 +1,7 @@
-import type { Profile, Vertical } from "@/lib/types";
+import type { AdminRole, Vertical } from "@/lib/types";
 
 export function resolveEffectiveVerticalId(
-  profile: Profile,
+  profile: { role: AdminRole; vertical_id: string | null },
   verticals: Vertical[],
   requestedV?: string
 ): string {
