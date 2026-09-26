@@ -2,7 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/current-profile";
 import { resolveEffectiveVerticalId } from "@/lib/effective-vertical";
 import { ReportsClient, type MemberSummary } from "./reports-client";
+import type { MeetingStat } from "./charts";
 import { VerticalBadge } from "@/components/VerticalBadge";
+import type { AttendanceStatus, MemberGroup } from "@/lib/types";
 
 export default async function ReportsPage({
   searchParams,
@@ -21,20 +23,28 @@ export default async function ReportsPage({
   const verticalId = resolveEffectiveVerticalId(profile, verticals, v);
   const verticalName = verticals.find((ver) => ver.id === verticalId)?.name ?? "";
 
-  const { data: members } = await supabase
-    .from("members")
-    .select("id, full_name, roll_no, group_type")
-    .eq("vertical_id", verticalId)
-    .eq("is_active", true);
+  const [{ data: members }, { data: meetings }] = await Promise.all([
+    supabase
+      .from("members")
+      .select("id, full_name, roll_no, group_type")
+      .eq("vertical_id", verticalId)
+      .eq("is_active", true),
+    supabase
+      .from("meetings")
+      .select("id, date, description")
+      .eq("vertical_id", verticalId)
+      .order("date", { ascending: true })
+      .order("created_at", { ascending: true }),
+  ]);
 
   const memberIds = (members ?? []).map((m) => m.id);
   const { data: records } =
     memberIds.length > 0
       ? await supabase
           .from("attendance_records")
-          .select("member_id, status")
+          .select("meeting_id, member_id, status")
           .in("member_id", memberIds)
-      : { data: [] as { member_id: string; status: string }[] };
+      : { data: [] as { meeting_id: string; member_id: string; status: string }[] };
 
   const summaries: MemberSummary[] = (members ?? []).map((m) => {
     const memberRecords = (records ?? []).filter(
@@ -56,6 +66,21 @@ export default async function ReportsPage({
     };
   });
 
+  const groupOf = new Map((members ?? []).map((m) => [m.id, m.group_type as MemberGroup]));
+  const empty = () => ({ present: 0, absent: 0, informed: 0 });
+  const statsById = new Map<string, MeetingStat>(
+    (meetings ?? []).map((m) => [
+      m.id,
+      { ...m, coordinator: empty(), core_member: empty() },
+    ])
+  );
+  for (const r of records ?? []) {
+    const stat = statsById.get(r.meeting_id);
+    const group = groupOf.get(r.member_id);
+    if (stat && group) stat[group][r.status as AttendanceStatus]++;
+  }
+  const meetingStats = [...statsById.values()];
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -65,7 +90,7 @@ export default async function ReportsPage({
           Attendance summary
         </h1>
       </div>
-      <ReportsClient summaries={summaries} />
+      <ReportsClient summaries={summaries} meetings={meetingStats} />
     </div>
   );
 }

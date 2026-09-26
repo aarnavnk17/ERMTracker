@@ -3,6 +3,12 @@
 import { useMemo, useState } from "react";
 import type { MemberGroup } from "@/lib/types";
 import { SegmentedControl } from "@/components/SegmentedControl";
+import {
+  MeetingTrendChart,
+  RateDistributionChart,
+  ReportStats,
+  type MeetingStat,
+} from "./charts";
 
 export type MemberSummary = {
   id: string;
@@ -103,7 +109,13 @@ function downloadCsv(filename: string, csv: string) {
   URL.revokeObjectURL(url);
 }
 
-export function ReportsClient({ summaries }: { summaries: MemberSummary[] }) {
+export function ReportsClient({
+  summaries,
+  meetings,
+}: {
+  summaries: MemberSummary[];
+  meetings: MeetingStat[];
+}) {
   const [activeTab, setActiveTab] = useState<MemberGroup>("coordinator");
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
     key: "full_name",
@@ -130,6 +142,8 @@ export function ReportsClient({ summaries }: { summaries: MemberSummary[] }) {
     });
   }, [groupRows, sort]);
 
+  const rates = groupRows.filter((r) => r.total > 0).map((r) => r.present / r.total);
+
   function sortBy(key: SortKey, numeric: boolean) {
     setSort((prev) =>
       prev.key === key
@@ -146,6 +160,22 @@ export function ReportsClient({ summaries }: { summaries: MemberSummary[] }) {
         value={activeTab}
         onChange={setActiveTab}
       />
+
+      <ReportStats
+        meetings={meetings}
+        group={activeTab}
+        groupSize={groupRows.length}
+        rates={rates}
+      />
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+        <div className="lg:col-span-3">
+          <MeetingTrendChart meetings={meetings} group={activeTab} groupSize={groupRows.length} />
+        </div>
+        <div className="lg:col-span-2">
+          <RateDistributionChart rates={rates} unrated={groupRows.length - rates.length} />
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Leaderboard title="Most present" rows={groupRows} metric="present" />

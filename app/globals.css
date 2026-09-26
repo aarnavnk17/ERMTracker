@@ -118,6 +118,12 @@ body {
   }
 }
 
+@keyframes bar-grow {
+  from {
+    scale: 1 0;
+  }
+}
+
 @keyframes fade-in-up {
   from {
     opacity: 0;
@@ -158,6 +164,10 @@ body {
       translate 380ms var(--ease-out-soft),
       background-color 200ms ease;
     animation: thumb-in 220ms var(--ease-out-soft);
+  }
+  .bar-grow {
+    transform-origin: bottom;
+    animation: bar-grow 700ms var(--ease-out-soft) backwards;
   }
   .bar-segment {
     transition: width 600ms var(--ease-out-soft);
