@@ -55,8 +55,8 @@ export default async function MeetingPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href="/meetings" className="text-sm font-medium text-muted hover:text-body">
-        ← Back
+      <Link href="/meetings" className="self-start text-sm font-medium text-brand-600 hover:text-brand-500 dark:text-brand-400">
+        ‹ Meetings
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-3">

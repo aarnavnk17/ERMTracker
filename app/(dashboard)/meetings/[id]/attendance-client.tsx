@@ -1,8 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { AttendanceStatus, MemberGroup } from "@/lib/types";
+import { SegmentedControl } from "@/components/SegmentedControl";
+import { AttendanceBar } from "@/components/AttendanceBar";
+import { SearchField } from "@/components/SearchField";
 
 type MemberRow = {
   id: string;
@@ -24,6 +27,24 @@ const STATUS_LABELS: Record<AttendanceStatus, string> = {
 };
 
 type FilterValue = "all" | "unmarked" | AttendanceStatus;
+const STATUS_THUMB: Record<AttendanceStatus, string> = {
+  present: "bg-emerald-600",
+  absent: "bg-red-600",
+  informed: "bg-brand-500",
+};
+const STATUS_TEXT: Record<AttendanceStatus, string> = {
+  present: "text-white",
+  absent: "text-white",
+  informed: "text-ink-950",
+};
+const STATUS_OPTIONS = (["present", "absent", "informed"] as AttendanceStatus[]).map(
+  (value) => ({ value, label: STATUS_LABELS[value] })
+);
+const GROUP_OPTIONS = (["coordinator", "core_member"] as MemberGroup[]).map((value) => ({
+  value,
+  label: GROUP_LABELS[value],
+}));
+
 const FILTERS: { value: FilterValue; label: string }[] = [
   { value: "all", label: "All" },
   { value: "unmarked", label: "Not marked" },
@@ -49,39 +70,38 @@ export function MeetingAttendance({
     coordinator: "all",
     core_member: "all",
   });
-  const [pendingId, setPendingId] = useState<string | null>(null);
   const [errorId, setErrorId] = useState<string | null>(null);
+  // Writes for one member run in order, so fast re-taps never land out of sequence.
+  const queues = useRef(new Map<string, Promise<void>>());
+  const latest = useRef(new Map<string, number>());
 
-  async function mark(memberId: string, status: AttendanceStatus) {
+  function mark(memberId: string, status: AttendanceStatus) {
     const previous = rows.find((r) => r.id === memberId)?.status ?? null;
-    setRows((prev) =>
-      prev.map((r) => (r.id === memberId ? { ...r, status } : r))
-    );
-    setPendingId(memberId);
+    if (previous === status) return;
+    setRows((prev) => prev.map((r) => (r.id === memberId ? { ...r, status } : r)));
     setErrorId(null);
 
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const seq = (latest.current.get(memberId) ?? 0) + 1;
+    latest.current.set(memberId, seq);
 
-    const { error } = await supabase.from("attendance_records").upsert(
-      {
-        meeting_id: meetingId,
-        member_id: memberId,
-        status,
-        marked_by: user?.id,
-      },
-      { onConflict: "meeting_id,member_id" }
-    );
-
-    setPendingId(null);
-    if (error) {
-      setRows((prev) =>
-        prev.map((r) => (r.id === memberId ? { ...r, status: previous } : r))
+    const run = async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const { error } = await supabase.from("attendance_records").upsert(
+        { meeting_id: meetingId, member_id: memberId, status, marked_by: user?.id },
+        { onConflict: "meeting_id,member_id" }
       );
-      setErrorId(memberId);
-    }
+      if (error && latest.current.get(memberId) === seq) {
+        setRows((prev) =>
+          prev.map((r) => (r.id === memberId ? { ...r, status: previous } : r))
+        );
+        setErrorId(memberId);
+      }
+    };
+    const next = (queues.current.get(memberId) ?? Promise.resolve()).then(run);
+    queues.current.set(memberId, next);
   }
 
   const groupRows = useMemo(
@@ -115,109 +135,86 @@ export function MeetingAttendance({
     return c;
   }, [groupRows]);
 
+  const filterCounts: Record<FilterValue, number> = {
+    all: groupRows.length,
+    ...counts,
+  };
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex gap-1 rounded-md border border-line bg-surface p-1">
-        {(["coordinator", "core_member"] as MemberGroup[]).map((g) => (
-          <button
-            key={g}
-            onClick={() => setActiveTab(g)}
-            className={`eyebrow flex-1 rounded-md px-3 py-2 transition-colors ${
-              activeTab === g
-                ? "bg-brand-600 text-ink-950"
-                : "text-muted hover:bg-surface-muted"
-            }`}
-          >
-            {GROUP_LABELS[g]}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        ariaLabel="Member group"
+        options={GROUP_OPTIONS}
+        value={activeTab}
+        onChange={setActiveTab}
+      />
 
-      <div className="sticky top-0 z-10 -mx-5 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-page/90 px-5 py-3 backdrop-blur-sm sm:mx-0 sm:rounded-md sm:border sm:px-4">
-        <div className="flex flex-wrap gap-1.5">
-          {FILTERS.map((f) => (
-            <button
-              key={f.value}
-              onClick={() =>
-                setFilter((prev) => ({ ...prev, [activeTab]: f.value }))
-              }
-              className={`eyebrow rounded-md px-3 py-1.5 ${
-                filter[activeTab] === f.value
-                  ? "bg-brand-600 text-ink-950"
-                  : "text-muted hover:bg-surface-muted"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+      <AttendanceBar
+        present={counts.present}
+        absent={counts.absent}
+        informed={counts.informed}
+        total={groupRows.length}
+      />
+
+      <div className="glass-bar sticky top-[calc(var(--header-h,0px)+0.75rem)] z-10 -mx-5 flex flex-wrap items-center justify-between gap-3 border-y border-line px-5 py-3 sm:mx-0 sm:rounded-2xl sm:border sm:px-3">
+        <div className="flex flex-wrap gap-1">
+          {FILTERS.map((f) => {
+            const active = filter[activeTab] === f.value;
+            return (
+              <button
+                key={f.value}
+                aria-pressed={active}
+                onClick={() => setFilter((prev) => ({ ...prev, [activeTab]: f.value }))}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition-[background-color,color,scale] duration-150 active:scale-95 ${
+                  active
+                    ? "bg-body text-page"
+                    : "text-muted hover:bg-surface-muted hover:text-body"
+                }`}
+              >
+                {f.label}
+                <span className={`tabular-nums ${active ? "opacity-60" : "opacity-70"}`}>
+                  {filterCounts[f.value]}
+                </span>
+              </button>
+            );
+          })}
         </div>
-        <input
-          type="text"
-          placeholder="Search name or roll no..."
+        <SearchField
+          placeholder="Search name or roll no"
           value={search[activeTab]}
-          onChange={(e) =>
-            setSearch((s) => ({ ...s, [activeTab]: e.target.value }))
-          }
-          className="input max-w-xs"
+          onChange={(v) => setSearch((s) => ({ ...s, [activeTab]: v }))}
+          className="w-full sm:max-w-xs"
         />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="badge bg-emerald-50 text-emerald-800 ring-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-800">
-          {counts.present} Present
-        </span>
-        <span className="badge bg-red-50 text-red-800 ring-red-300 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-800">
-          {counts.absent} Absent
-        </span>
-        <span className="badge bg-brand-50 text-brand-800 ring-brand-300 dark:bg-brand-900/40 dark:text-brand-300 dark:ring-brand-700">
-          {counts.informed} Informed
-        </span>
-        <span className="badge bg-surface-muted text-muted ring-line">
-          {counts.unmarked} Not marked
-        </span>
       </div>
 
       <div className="card overflow-hidden">
         {visibleRows.length === 0 ? (
-          <p className="px-5 py-8 text-center text-sm text-muted">
-            No members match this search/filter.
+          <p className="px-5 py-12 text-center text-sm text-muted">
+            No members match this search or filter.
           </p>
         ) : (
-          <ul className="divide-y divide-line">
+          <ul>
             {visibleRows.map((r) => (
               <li
                 key={r.id}
-                className="flex flex-col gap-3 px-5 py-3 sm:flex-row sm:items-center sm:justify-between"
+                className="relative flex flex-col gap-3 px-5 py-3.5 after:absolute after:bottom-0 after:left-5 after:right-0 after:h-px after:bg-line last:after:hidden sm:flex-row sm:items-center sm:justify-between"
               >
-                <div>
-                  <p className="text-sm font-medium text-body">{r.full_name}</p>
-                  <p className="font-mono text-xs text-muted">{r.roll_no}</p>
+                <div className="min-w-0">
+                  <p className="truncate text-[15px] font-medium text-body">{r.full_name}</p>
+                  <p className="text-xs tabular-nums text-muted">{r.roll_no}</p>
                   {errorId === r.id && (
-                    <p className="field-error">Could not save — try again.</p>
+                    <p className="field-error">Could not save. Try again.</p>
                   )}
                 </div>
-                <div className="flex gap-1.5">
-                  {(["present", "absent", "informed"] as AttendanceStatus[]).map(
-                    (status) => (
-                      <button
-                        key={status}
-                        disabled={pendingId === r.id}
-                        onClick={() => mark(r.id, status)}
-                        className={`eyebrow rounded-md px-3 py-1.5 transition-colors disabled:opacity-50 ${
-                          r.status === status
-                            ? status === "present"
-                              ? "bg-emerald-600 text-white"
-                              : status === "absent"
-                              ? "bg-red-600 text-white"
-                              : "bg-brand-500 text-ink-950"
-                            : "bg-surface-muted text-muted hover:text-body"
-                        }`}
-                      >
-                        {STATUS_LABELS[status]}
-                      </button>
-                    )
-                  )}
-                </div>
+                <SegmentedControl
+                  ariaLabel={`Attendance for ${r.full_name}`}
+                  options={STATUS_OPTIONS}
+                  value={r.status}
+                  onChange={(status) => mark(r.id, status)}
+                  thumbClassName={(v) => STATUS_THUMB[v]}
+                  activeTextClassName={(v) => STATUS_TEXT[v]}
+                  className="w-full shrink-0 sm:w-72"
+                />
               </li>
             ))}
           </ul>

@@ -3,17 +3,18 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme {
-  --color-ink-50: #f4f6f9;
-  --color-ink-100: #e8ecf2;
-  --color-ink-200: #d3dae5;
-  --color-ink-300: #adb9cc;
-  --color-ink-400: #7e8ba3;
-  --color-ink-500: #5b6883;
-  --color-ink-600: #45516c;
-  --color-ink-700: #333d54;
-  --color-ink-800: #2e2620;
-  --color-ink-900: #1c1712;
-  --color-ink-950: #0c0a09;
+  /* one warm neutral scale, so light and dark read as the same app */
+  --color-ink-50: #f6f5f3;
+  --color-ink-100: #eceae6;
+  --color-ink-200: #dcd8d2;
+  --color-ink-300: #bdb7ae;
+  --color-ink-400: #978f84;
+  --color-ink-500: #756d62;
+  --color-ink-600: #5a534a;
+  --color-ink-700: #443e37;
+  --color-ink-800: #2e2923;
+  --color-ink-900: #1c1814;
+  --color-ink-950: #0e0c0a;
 
   /* antique gold */
   --color-brand-50: #faf3e7;
@@ -27,10 +28,12 @@
   --color-brand-800: #6e4a29;
   --color-brand-900: #523620;
 
-  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-outfit), var(--font-manrope), ui-sans-serif, sans-serif;
-  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
-  --font-wordmark: var(--font-cinzel), var(--font-display), serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto,
+    "Helvetica Neue", sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, "Segoe UI",
+    Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --font-wordmark: var(--font-cinzel), serif;
   --font-script: var(--font-alex-brush), cursive;
 }
 
@@ -38,27 +41,35 @@
   --page: var(--color-ink-50);
   --surface: #fff;
   --surface-muted: var(--color-ink-100);
-  --border: var(--color-ink-200);
+  --border: rgba(28, 24, 20, 0.09);
   --text: var(--color-ink-900);
   --text-muted: var(--color-ink-500);
+  --card-shadow: 0 0 0 1px rgba(28, 24, 20, 0.05), 0 1px 2px rgba(28, 24, 20, 0.04),
+    0 2px 8px rgba(28, 24, 20, 0.03);
+  --card-shadow-hover: 0 0 0 1px rgba(28, 24, 20, 0.06), 0 4px 12px rgba(28, 24, 20, 0.06),
+    0 12px 32px rgba(28, 24, 20, 0.06);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --page: var(--color-ink-950);
     --surface: var(--color-ink-900);
     --surface-muted: var(--color-ink-800);
-    --border: var(--color-ink-800);
+    --border: rgba(255, 245, 230, 0.08);
     --text: var(--color-ink-50);
     --text-muted: var(--color-ink-400);
+    --card-shadow: 0 0 0 1px rgba(255, 245, 230, 0.07);
+    --card-shadow-hover: 0 0 0 1px rgba(255, 245, 230, 0.1), 0 12px 32px rgba(0, 0, 0, 0.45);
   }
 }
 :root[data-theme="dark"] {
   --page: var(--color-ink-950);
   --surface: var(--color-ink-900);
   --surface-muted: var(--color-ink-800);
-  --border: var(--color-ink-800);
+  --border: rgba(255, 245, 230, 0.08);
   --text: var(--color-ink-50);
   --text-muted: var(--color-ink-400);
+  --card-shadow: 0 0 0 1px rgba(255, 245, 230, 0.07);
+  --card-shadow-hover: 0 0 0 1px rgba(255, 245, 230, 0.1), 0 12px 32px rgba(0, 0, 0, 0.45);
 }
 
 @theme inline {
@@ -73,23 +84,38 @@
 body {
   background: var(--page);
   color: var(--text);
-  font-feature-settings: "ss01" 1;
+  font-optical-sizing: auto;
+  letter-spacing: -0.006em;
+  transition: background-color 250ms ease, color 250ms ease;
 }
 
+/* Reduced motion: drop movement and scale, keep short fades that aid comprehension. */
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
   ::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+    transition-property: opacity, color, background-color, border-color !important;
+    transition-duration: 150ms !important;
   }
 }
 :focus-visible {
   outline: 2px solid var(--color-brand-500);
   outline-offset: 2px;
-  border-radius: 4px;
+}
+
+/* Apple-style ease: fast start, long soft settle, no overshoot */
+:root {
+  --ease-out-soft: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes thumb-in {
+  from {
+    opacity: 0;
+    scale: 0.85;
+  }
 }
 
 @keyframes fade-in-up {
@@ -102,48 +128,93 @@ body {
     transform: none;
   }
 }
-@keyframes reveal-panel-left {
-  0%,
-  30% {
-    translate: 0 0;
+@layer components {
+  /* translucent chrome: content scrolls underneath */
+  .glass-bar {
+    background: color-mix(in srgb, var(--page) 72%, transparent);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
   }
-  100% {
-    translate: -100% 0;
+  /* floating panels are thicker than the bar they drop from */
+  .glass-panel {
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    backdrop-filter: blur(30px) saturate(180%);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    box-shadow: var(--card-shadow), 0 12px 40px rgba(0, 0, 0, 0.14);
   }
-}
-@keyframes reveal-panel-right {
-  0%,
-  30% {
-    translate: 0 0;
+  @media (prefers-reduced-transparency: reduce) {
+    .glass-bar {
+      background: var(--page);
+      backdrop-filter: none;
+    }
+    .glass-panel {
+      background: var(--surface);
+      backdrop-filter: none;
+    }
   }
-  100% {
-    translate: 100% 0;
+
+  .segment-thumb {
+    transition:
+      translate 380ms var(--ease-out-soft),
+      background-color 200ms ease;
+    animation: thumb-in 220ms var(--ease-out-soft);
   }
-}
-@keyframes reveal-logo {
-  0% {
+  .bar-segment {
+    transition: width 600ms var(--ease-out-soft);
+  }
+
+  /* Native <dialog> that materializes: fade + scale + blur in, reverse on close. */
+  .sheet {
+    margin: auto;
     opacity: 0;
-    scale: 0.85;
+    scale: 0.94;
+    filter: blur(4px);
+    transition:
+      opacity 200ms ease,
+      scale 320ms var(--ease-out-soft),
+      filter 240ms ease,
+      overlay 320ms allow-discrete,
+      display 320ms allow-discrete;
   }
-  20%,
-  65% {
+  .sheet[open] {
     opacity: 1;
     scale: 1;
+    filter: none;
   }
-  100% {
-    opacity: 0;
-    scale: 1.05;
+  @starting-style {
+    .sheet[open] {
+      opacity: 0;
+      scale: 0.94;
+      filter: blur(4px);
+    }
   }
-}
+  .sheet::backdrop {
+    background: rgb(0 0 0 / 0);
+    backdrop-filter: blur(0);
+    transition:
+      background-color 250ms ease,
+      backdrop-filter 250ms ease,
+      overlay 320ms allow-discrete,
+      display 320ms allow-discrete;
+  }
+  .sheet[open]::backdrop {
+    background: rgb(0 0 0 / 0.35);
+    backdrop-filter: blur(3px);
+  }
+  @starting-style {
+    .sheet[open]::backdrop {
+      background: rgb(0 0 0 / 0);
+      backdrop-filter: blur(0);
+    }
+  }
 
-@layer components {
   .card {
-    @apply rounded-md border border-line bg-surface transition-[translate,box-shadow] duration-150 ease-out;
+    @apply rounded-2xl bg-surface shadow-(--card-shadow)
+      transition-[translate,box-shadow,scale] duration-200 ease-out;
   }
   .card-link {
-    @apply block shadow-[0_1px_2px_rgba(10,15,26,0.04)] hover:-translate-y-0.5
-      hover:shadow-[0_8px_20px_rgba(10,15,26,0.08)] dark:shadow-none
-      dark:hover:shadow-[0_8px_24px_rgba(0,0,0,0.35)];
+    @apply block hover:-translate-y-0.5 hover:shadow-(--card-shadow-hover)
+      active:translate-y-0 active:scale-[0.99] active:duration-100;
     animation: fade-in-up 400ms ease-out backwards;
   }
   .card-urgent {
@@ -157,37 +228,41 @@ body {
   .btn-primary,
   .btn-secondary,
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2
-      font-mono text-xs font-semibold uppercase tracking-[0.08em]
-      transition-[background-color,border-color,color,scale] duration-150 active:scale-[0.98]
-      disabled:cursor-not-allowed disabled:opacity-55 disabled:active:scale-100;
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-full px-5
+      text-sm font-medium tracking-[-0.01em] whitespace-nowrap
+      transition-[background-color,border-color,color,scale] duration-150 ease-out
+      active:scale-[0.97] active:duration-75
+      disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
   }
   .btn-primary {
     @apply bg-brand-500 text-ink-950 hover:bg-brand-400;
   }
   .btn-secondary {
-    @apply border border-line bg-surface text-body hover:bg-surface-muted;
+    @apply bg-surface-muted text-body hover:bg-ink-200 dark:hover:bg-ink-700;
   }
   .btn-danger {
-    @apply border border-red-300 text-red-700 hover:bg-red-50
-      dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40;
+    @apply bg-red-50 text-red-700 hover:bg-red-100
+      dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-950/70;
   }
 
+  /* small section label that sits above a heading or a stat */
   .eyebrow {
-    @apply font-mono text-[11px] uppercase tracking-[0.18em];
+    @apply text-xs font-semibold uppercase tracking-[0.06em];
   }
   .label {
     @apply mb-1.5 block text-sm font-medium text-body;
   }
   .input {
-    @apply w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-body
+    @apply h-10 w-full rounded-xl border border-line bg-surface px-3.5 text-sm text-body
+      transition-[border-color,box-shadow] duration-150
       placeholder:text-muted focus:border-brand-500 focus:outline-none
-      focus:ring-2 focus:ring-brand-500/25;
+      focus:ring-4 focus:ring-brand-500/15;
   }
   .field-error {
     @apply mt-1.5 text-sm text-red-600 dark:text-red-400;
   }
   .badge {
-    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset;
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium
+      whitespace-nowrap ring-1 ring-inset;
   }
 }

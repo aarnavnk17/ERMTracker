@@ -1,22 +1,6 @@
 import type { Metadata } from "next";
-import { Outfit, Manrope, JetBrains_Mono, Cinzel, Alex_Brush } from "next/font/google";
-import { PageGlow } from "@/components/PageGlow";
+import { Cinzel, Alex_Brush } from "next/font/google";
 import "./globals.css";
-
-const outfit = Outfit({
-  variable: "--font-outfit",
-  subsets: ["latin"],
-});
-
-const manrope = Manrope({
-  variable: "--font-manrope",
-  subsets: ["latin"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-});
 
 const cinzel = Cinzel({
   variable: "--font-cinzel",
@@ -51,7 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${outfit.variable} ${manrope.variable} ${jetbrainsMono.variable} ${cinzel.variable} ${alexBrush.variable} h-full antialiased`}
+      className={`${cinzel.variable} ${alexBrush.variable} h-full antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
@@ -59,11 +43,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-brand-600 focus:px-4 focus:py-2 focus:font-mono focus:text-xs focus:font-semibold focus:uppercase focus:tracking-[0.08em] focus:text-ink-950"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-brand-500 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-ink-950"
         >
           Skip to content
         </a>
-        <PageGlow />
         <div className="relative z-[1] flex min-h-full flex-1 flex-col">
           {children}
         </div>

@@ -1,9 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/current-profile";
-import { SignOutButton } from "@/components/SignOutButton";
 import { Masthead } from "@/components/Masthead";
 import { MastheadSubtitle } from "@/components/MastheadSubtitle";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { AccountMenu } from "@/components/AccountMenu";
+import { StickyHeader } from "@/components/StickyHeader";
 import { DashboardNav } from "@/components/DashboardNav";
 
 export default async function DashboardLayout({
@@ -37,8 +37,11 @@ export default async function DashboardLayout({
           ) : undefined
         }
       />
-      <header className="border-b border-ink-800 bg-ink-950">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-3 px-5 py-3">
+      <StickyHeader>
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-3 gap-y-2 px-5 py-2.5">
+          <span className="mr-2 hidden text-[15px] font-semibold tracking-tight text-body lg:inline">
+            SU Tracker
+          </span>
           {profile && (
             <DashboardNav
               role={profile.role}
@@ -47,19 +50,17 @@ export default async function DashboardLayout({
               defaultVerticalId={list[0]?.id ?? ""}
             />
           )}
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-ink-400 md:inline">
-              {profile?.display_name}
-            </span>
-            <ThemeToggle />
-            <SignOutButton dark />
-          </div>
+          {profile && (
+            <div className="ml-auto sm:ml-0">
+              <AccountMenu displayName={profile.display_name} role={profile.role} />
+            </div>
+          )}
         </div>
-      </header>
+      </StickyHeader>
       <main id="main-content" className="mx-auto w-full max-w-5xl flex-1 px-5 py-10 sm:py-14">
         {children}
       </main>
-      <footer className="border-t border-line py-6 text-center text-sm text-muted">
+      <footer className="border-t border-line py-8 text-center text-xs text-muted">
         SU Tracker
       </footer>
     </div>

@@ -2,8 +2,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/current-profile";
 import { resolveEffectiveVerticalId } from "@/lib/effective-vertical";
+import type { AttendanceStatus } from "@/lib/types";
 import { NewMeetingForm } from "./new-meeting-form";
-import { SlotMeter } from "@/components/SlotMeter";
+import { AttendanceBar } from "@/components/AttendanceBar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { VerticalBadge } from "@/components/VerticalBadge";
 
@@ -45,15 +46,26 @@ export default async function MeetingsPage({
     list.length > 0
       ? await supabase
           .from("attendance_records")
-          .select("meeting_id")
+          .select("meeting_id, status")
           .in("meeting_id", list.map((m) => m.id))
-      : { data: [] as { meeting_id: string }[] };
+      : { data: [] as { meeting_id: string; status: AttendanceStatus }[] };
 
-  const markedCounts = new Map<string, number>();
+  const statusCounts = new Map<string, Record<AttendanceStatus, number>>();
   for (const r of records ?? []) {
-    markedCounts.set(r.meeting_id, (markedCounts.get(r.meeting_id) ?? 0) + 1);
+    const c = statusCounts.get(r.meeting_id) ?? { present: 0, absent: 0, informed: 0 };
+    c[r.status as AttendanceStatus]++;
+    statusCounts.set(r.meeting_id, c);
   }
-  const fullyMarked = list.filter((m) => (markedCounts.get(m.id) ?? 0) >= total).length;
+  const markedCount = (id: string) => {
+    const c = statusCounts.get(id);
+    return c ? c.present + c.absent + c.informed : 0;
+  };
+  const fullyMarked = list.filter((m) => total > 0 && markedCount(m.id) >= total).length;
+  const stats = [
+    { label: "Meetings", value: list.length },
+    { label: "Fully marked", value: fullyMarked },
+    { label: "Active members", value: total },
+  ];
 
   return (
     <div className="flex flex-col gap-10">
@@ -67,32 +79,26 @@ export default async function MeetingsPage({
           Log a meeting and mark Present, Absent or Informed for each member.
         </p>
 
-        <dl className="mt-8 grid grid-cols-3 gap-4 border-y border-line py-5">
-          <div>
-            <dt className="eyebrow text-muted">Meetings</dt>
-            <dd className="font-mono text-2xl font-semibold text-body sm:text-3xl">
-              {list.length}
-            </dd>
-          </div>
-          <div>
-            <dt className="eyebrow text-muted">Fully marked</dt>
-            <dd className="font-mono text-2xl font-semibold text-body sm:text-3xl">
-              {fullyMarked}
-            </dd>
-          </div>
-          <div>
-            <dt className="eyebrow text-muted">Active members</dt>
-            <dd className="font-mono text-2xl font-semibold text-body sm:text-3xl">
-              {total}
-            </dd>
-          </div>
+        <dl className="mt-8 grid grid-cols-3 gap-3">
+          {stats.map((st) => (
+            <div key={st.label} className="card px-4 py-3.5 sm:px-5 sm:py-4">
+              <dt className="text-xs font-medium text-muted sm:text-sm">{st.label}</dt>
+              <dd className="mt-1 font-display text-3xl font-semibold tracking-tight tabular-nums text-body sm:text-4xl">
+                {st.value}
+              </dd>
+            </div>
+          ))}
         </dl>
       </div>
 
       <NewMeetingForm verticalId={verticalId} />
 
       {list.length === 0 ? (
-        <div className="card px-6 py-16 text-center">
+        <div className="card flex flex-col items-center px-6 py-16 text-center">
+          <svg aria-hidden viewBox="0 0 24 24" className="mb-3 size-10 text-ink-300 dark:text-ink-600" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3.5" y="5" width="17" height="15" rx="3" />
+            <path d="M3.5 10h17M8 3v4M16 3v4" />
+          </svg>
           <p className="text-base font-medium text-body">No meetings yet</p>
           <p className="mt-1 text-sm text-muted">
             Create one above to start marking attendance.
@@ -101,7 +107,8 @@ export default async function MeetingsPage({
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((m, i) => {
-            const marked = markedCounts.get(m.id) ?? 0;
+            const c = statusCounts.get(m.id) ?? { present: 0, absent: 0, informed: 0 };
+            const marked = markedCount(m.id);
             const full = total > 0 && marked >= total;
             return (
               <Link
@@ -126,7 +133,12 @@ export default async function MeetingsPage({
                   })}
                 </p>
                 <div className="mt-auto">
-                  <SlotMeter marked={marked} total={total} />
+                  <AttendanceBar
+                    present={c.present}
+                    absent={c.absent}
+                    informed={c.informed}
+                    total={total}
+                  />
                 </div>
               </Link>
             );

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { MemberGroup } from "@/lib/types";
+import { SegmentedControl } from "@/components/SegmentedControl";
 
 export type MemberSummary = {
   id: string;
@@ -19,6 +20,25 @@ const GROUP_LABELS: Record<MemberGroup, string> = {
   core_member: "Core Team Members",
 };
 
+const GROUP_OPTIONS = (["coordinator", "core_member"] as MemberGroup[]).map((value) => ({
+  value,
+  label: GROUP_LABELS[value],
+}));
+
+type SortKey = "full_name" | "present" | "absent" | "informed" | "total" | "rate";
+const COLUMNS: { key: SortKey; label: string; numeric: boolean }[] = [
+  { key: "full_name", label: "Name", numeric: false },
+  { key: "present", label: "Present", numeric: true },
+  { key: "absent", label: "Absent", numeric: true },
+  { key: "informed", label: "Informed", numeric: true },
+  { key: "total", label: "Total", numeric: true },
+  { key: "rate", label: "Attendance", numeric: true },
+];
+
+function rate(r: MemberSummary) {
+  return r.total > 0 ? r.present / r.total : -1;
+}
+
 function Leaderboard({
   title,
   rows,
@@ -35,7 +55,7 @@ function Leaderboard({
 
   return (
     <div className="card p-5">
-      <p className="eyebrow text-muted">{title}</p>
+      <p className="text-sm font-semibold text-body">{title}</p>
       {top.length === 0 ? (
         <p className="mt-3 text-sm text-muted">No data yet.</p>
       ) : (
@@ -45,7 +65,7 @@ function Leaderboard({
               <span className="text-muted">
                 {i + 1}. {r.full_name}
               </span>
-              <span className="font-mono font-medium text-body">{r[metric]}</span>
+              <span className="font-medium tabular-nums text-body">{r[metric]}</span>
             </li>
           ))}
         </ol>
@@ -85,6 +105,10 @@ function downloadCsv(filename: string, csv: string) {
 
 export function ReportsClient({ summaries }: { summaries: MemberSummary[] }) {
   const [activeTab, setActiveTab] = useState<MemberGroup>("coordinator");
+  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
+    key: "full_name",
+    dir: "asc",
+  });
 
   const groupRows = useMemo(
     () =>
@@ -94,23 +118,34 @@ export function ReportsClient({ summaries }: { summaries: MemberSummary[] }) {
     [summaries, activeTab]
   );
 
+  const sortedRows = useMemo(() => {
+    const value = (r: MemberSummary) => (sort.key === "rate" ? rate(r) : r[sort.key]);
+    const sign = sort.dir === "asc" ? 1 : -1;
+    return [...groupRows].sort((a, b) => {
+      const va = value(a);
+      const vb = value(b);
+      const cmp =
+        typeof va === "string" ? va.localeCompare(vb as string) : (va as number) - (vb as number);
+      return cmp * sign || a.full_name.localeCompare(b.full_name);
+    });
+  }, [groupRows, sort]);
+
+  function sortBy(key: SortKey, numeric: boolean) {
+    setSort((prev) =>
+      prev.key === key
+        ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { key, dir: numeric ? "desc" : "asc" }
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex gap-1 rounded-md border border-line bg-surface p-1">
-        {(["coordinator", "core_member"] as MemberGroup[]).map((g) => (
-          <button
-            key={g}
-            onClick={() => setActiveTab(g)}
-            className={`eyebrow flex-1 rounded-md px-3 py-2 transition-colors ${
-              activeTab === g
-                ? "bg-brand-600 text-ink-950"
-                : "text-muted hover:bg-surface-muted"
-            }`}
-          >
-            {GROUP_LABELS[g]}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        ariaLabel="Member group"
+        options={GROUP_OPTIONS}
+        value={activeTab}
+        onChange={setActiveTab}
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Leaderboard title="Most present" rows={groupRows} metric="present" />
@@ -119,45 +154,104 @@ export function ReportsClient({ summaries }: { summaries: MemberSummary[] }) {
       </div>
 
       <div className="card overflow-hidden">
-        <div className="flex items-center justify-between border-b border-line px-5 py-3">
-          <h2 className="text-sm font-medium text-body">
+        <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-3">
+          <h2 className="text-[15px] font-semibold tracking-tight text-body">
             {GROUP_LABELS[activeTab]} summary
           </h2>
           <button
             onClick={() =>
-              downloadCsv(`${activeTab}-attendance-summary.csv`, toCsv(groupRows))
+              downloadCsv(`${activeTab}-attendance-summary.csv`, toCsv(sortedRows))
             }
-            className="btn-secondary"
+            className="btn-secondary h-8 px-4"
           >
             Export CSV
           </button>
         </div>
         {groupRows.length === 0 ? (
-          <p className="px-5 py-8 text-center text-sm text-muted">No members yet.</p>
+          <p className="px-5 py-12 text-center text-sm text-muted">No members yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
-                  <th className="py-2 pr-4 pl-5 font-medium">Name</th>
-                  <th className="py-2 pr-4 font-medium">Roll No</th>
-                  <th className="py-2 pr-4 font-medium">Present</th>
-                  <th className="py-2 pr-4 font-medium">Absent</th>
-                  <th className="py-2 pr-4 font-medium">Informed</th>
-                  <th className="py-2 pr-5 font-medium">Total</th>
+                <tr className="border-b border-line text-xs text-muted">
+                  {COLUMNS.map((c, i) => {
+                    const active = sort.key === c.key;
+                    return (
+                      <th
+                        key={c.key}
+                        aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
+                        className={`py-1.5 font-medium ${i === 0 ? "pl-3" : ""} ${
+                          i === COLUMNS.length - 1 ? "pr-3" : ""
+                        } ${c.numeric ? "text-right" : "text-left"}`}
+                      >
+                        <button
+                          onClick={() => sortBy(c.key, c.numeric)}
+                          className={`inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors hover:bg-surface-muted hover:text-body ${
+                            active ? "text-body" : ""
+                          }`}
+                        >
+                          {c.label}
+                          <svg
+                            aria-hidden
+                            viewBox="0 0 10 10"
+                            className={`size-2.5 transition-[opacity,rotate] duration-200 ${
+                              active ? "opacity-100" : "opacity-0"
+                            } ${active && sort.dir === "asc" ? "rotate-180" : ""}`}
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M2.5 4 5 6.5 7.5 4" />
+                          </svg>
+                        </button>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
-                {groupRows.map((r) => (
-                  <tr key={r.id} className="border-b border-line last:border-0">
-                    <td className="py-3 pr-4 pl-5 font-medium text-body">{r.full_name}</td>
-                    <td className="py-3 pr-4 font-mono text-xs text-muted">{r.roll_no ?? "—"}</td>
-                    <td className="py-3 pr-4 text-muted">{r.present}</td>
-                    <td className="py-3 pr-4 text-muted">{r.absent}</td>
-                    <td className="py-3 pr-4 text-muted">{r.informed}</td>
-                    <td className="py-3 pr-5 text-muted">{r.total}</td>
-                  </tr>
-                ))}
+                {sortedRows.map((r) => {
+                  const pct = rate(r);
+                  return (
+                    <tr key={r.id} className="border-b border-line last:border-0">
+                      <td className="py-3 pl-5 pr-4">
+                        <p className="font-medium text-body">{r.full_name}</p>
+                        {r.roll_no && (
+                          <p className="text-xs tabular-nums text-muted">{r.roll_no}</p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums text-body">{r.present}</td>
+                      <td className="px-4 py-3 text-right tabular-nums text-body">{r.absent}</td>
+                      <td className="px-4 py-3 text-right tabular-nums text-body">{r.informed}</td>
+                      <td className="px-4 py-3 text-right tabular-nums text-muted">{r.total}</td>
+                      <td className="py-3 pl-4 pr-5">
+                        {pct < 0 ? (
+                          <p className="text-right text-muted">—</p>
+                        ) : (
+                          <div className="flex items-center justify-end gap-2.5">
+                            <div className="h-1.5 w-16 overflow-hidden rounded-full bg-surface-muted">
+                              <div
+                                className={`bar-segment h-full rounded-full ${
+                                  pct >= 0.75
+                                    ? "bg-emerald-500"
+                                    : pct >= 0.5
+                                      ? "bg-brand-400"
+                                      : "bg-red-500"
+                                }`}
+                                style={{ width: `${pct * 100}%` }}
+                              />
+                            </div>
+                            <span className="w-10 text-right font-medium tabular-nums text-body">
+                              {Math.round(pct * 100)}%
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

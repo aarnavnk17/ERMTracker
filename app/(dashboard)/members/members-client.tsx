@@ -4,11 +4,17 @@ import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Member, MemberGroup } from "@/lib/types";
 import { Toggle } from "@/components/Toggle";
+import { SegmentedControl } from "@/components/SegmentedControl";
 
 const GROUP_LABELS: Record<MemberGroup, string> = {
   coordinator: "Team Coordinators",
   core_member: "Core Team Members",
 };
+
+const GROUP_OPTIONS = (["coordinator", "core_member"] as MemberGroup[]).map((value) => ({
+  value,
+  label: GROUP_LABELS[value],
+}));
 
 export function MembersManager({
   initialMembers,
@@ -24,6 +30,7 @@ export function MembersManager({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showInactive, setShowInactive] = useState(false);
+  const [savedId, setSavedId] = useState<string | null>(null);
 
   const groupMembers = useMemo(
     () =>
@@ -90,26 +97,19 @@ export function MembersManager({
       setMembers((prev) =>
         prev.map((m) => (m.id === member.id ? { ...m, full_name: newName } : m))
       );
+      setSavedId(member.id);
+      setTimeout(() => setSavedId((id) => (id === member.id ? null : id)), 1600);
     }
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex gap-1 rounded-md border border-line bg-surface p-1">
-        {(["coordinator", "core_member"] as MemberGroup[]).map((g) => (
-          <button
-            key={g}
-            onClick={() => setActiveTab(g)}
-            className={`eyebrow flex-1 rounded-md px-3 py-2 transition-colors ${
-              activeTab === g
-                ? "bg-brand-600 text-ink-950"
-                : "text-muted hover:bg-surface-muted"
-            }`}
-          >
-            {GROUP_LABELS[g]}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        ariaLabel="Member group"
+        options={GROUP_OPTIONS}
+        value={activeTab}
+        onChange={setActiveTab}
+      />
 
       <form onSubmit={handleAdd} className="card flex flex-col gap-4 p-5 sm:flex-row sm:items-end">
         <div className="flex flex-1 flex-col gap-1">
@@ -137,14 +137,16 @@ export function MembersManager({
         </button>
       </form>
 
-      <label className="flex items-center gap-2 text-sm text-muted">
-        <input
-          type="checkbox"
+      <div className="flex items-center justify-between gap-3 px-1">
+        <span className="text-sm text-muted">
+          Show deactivated members
+        </span>
+        <Toggle
           checked={showInactive}
-          onChange={(e) => setShowInactive(e.target.checked)}
+          onChange={() => setShowInactive((v) => !v)}
+          label="Show deactivated members"
         />
-        Show deactivated members
-      </label>
+      </div>
 
       <div className="card overflow-x-auto">
         {groupMembers.length === 0 ? (
@@ -154,7 +156,7 @@ export function MembersManager({
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
+              <tr className="border-b border-line text-left text-xs text-muted">
                 <th className="py-2 pr-4 pl-5 font-medium">Name</th>
                 <th className="py-2 pr-4 font-medium">Roll No</th>
                 <th className="py-2 pr-5 font-medium">Active</th>
@@ -164,15 +166,33 @@ export function MembersManager({
               {groupMembers.map((m) => (
                 <tr key={m.id} className="border-b border-line last:border-0">
                   <td className="py-3 pr-4 pl-5">
-                    <input
-                      defaultValue={m.full_name}
-                      onBlur={(e) => renameMember(m, e.target.value)}
-                      className={`w-full rounded border border-transparent bg-transparent font-medium hover:border-line focus:border-brand-400 focus:outline-none ${
-                        m.is_active ? "text-body" : "text-muted line-through"
-                      }`}
-                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        defaultValue={m.full_name}
+                        aria-label={`Name for ${m.full_name}`}
+                        onBlur={(e) => renameMember(m, e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") e.currentTarget.blur();
+                          if (e.key === "Escape") {
+                            e.currentTarget.value = m.full_name;
+                            e.currentTarget.blur();
+                          }
+                        }}
+                        className={`-mx-2 w-full rounded-lg border border-transparent bg-transparent px-2 py-1 font-medium transition-colors hover:bg-surface-muted focus:border-brand-400 focus:bg-surface focus:outline-none ${
+                          m.is_active ? "text-body" : "text-muted line-through"
+                        }`}
+                      />
+                      <span
+                        aria-hidden={savedId !== m.id}
+                        className={`shrink-0 text-xs font-medium text-emerald-600 transition-opacity duration-300 dark:text-emerald-400 ${
+                          savedId === m.id ? "opacity-100" : "opacity-0"
+                        }`}
+                      >
+                        Saved
+                      </span>
+                    </div>
                   </td>
-                  <td className="py-3 pr-4 font-mono text-xs text-muted">{m.roll_no ?? "—"}</td>
+                  <td className="py-3 pr-4 text-xs tabular-nums text-muted">{m.roll_no ?? "—"}</td>
                   <td className="py-3 pr-5">
                     <Toggle
                       checked={m.is_active}
