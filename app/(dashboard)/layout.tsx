@@ -60,7 +60,7 @@ export default async function DashboardLayout({
         {children}
       </main>
       <footer className="border-t border-line py-6 text-center text-sm text-muted">
-        SU ERM Tracker
+        SU Tracker
       </footer>
     </div>
   );

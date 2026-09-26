@@ -30,8 +30,8 @@ const alexBrush = Alex_Brush({
 });
 
 export const metadata: Metadata = {
-  title: "SU ERM Tracker",
-  description: "Meeting attendance tracker for team coordinators and core team members",
+  title: "SU Tracker",
+  description: "Meeting attendance tracker for Students Union coordinators and core team members",
 };
 
 const THEME_INIT_SCRIPT = `
