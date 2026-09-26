@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export function NewMeetingForm() {
+export function NewMeetingForm({ verticalId }: { verticalId: string }) {
   const router = useRouter();
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState("");
@@ -23,7 +23,7 @@ export function NewMeetingForm() {
 
     const { data, error } = await supabase
       .from("meetings")
-      .insert({ date, description, created_by: user?.id })
+      .insert({ date, description, created_by: user?.id, vertical_id: verticalId })
       .select("id")
       .single();
 

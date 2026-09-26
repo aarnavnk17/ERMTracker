@@ -6,7 +6,7 @@ import type { MemberGroup } from "@/lib/types";
 export type MemberSummary = {
   id: string;
   full_name: string;
-  roll_no: string;
+  roll_no: string | null;
   group_type: MemberGroup;
   present: number;
   absent: number;
@@ -64,7 +64,7 @@ function toCsv(rows: MemberSummary[]): string {
     "Total Meetings Marked",
   ];
   const lines = rows.map((r) =>
-    [r.full_name, r.roll_no, r.present, r.absent, r.informed, r.total]
+    [r.full_name, r.roll_no ?? "", r.present, r.absent, r.informed, r.total]
       .map((v) => `"${String(v).replace(/"/g, '""')}"`)
       .join(",")
   );
@@ -151,7 +151,7 @@ export function ReportsClient({ summaries }: { summaries: MemberSummary[] }) {
                 {groupRows.map((r) => (
                   <tr key={r.id} className="border-b border-line last:border-0">
                     <td className="py-3 pr-4 pl-5 font-medium text-body">{r.full_name}</td>
-                    <td className="py-3 pr-4 font-mono text-xs text-muted">{r.roll_no}</td>
+                    <td className="py-3 pr-4 font-mono text-xs text-muted">{r.roll_no ?? "—"}</td>
                     <td className="py-3 pr-4 text-muted">{r.present}</td>
                     <td className="py-3 pr-4 text-muted">{r.absent}</td>
                     <td className="py-3 pr-4 text-muted">{r.informed}</td>

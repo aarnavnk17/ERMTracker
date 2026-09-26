@@ -10,7 +10,13 @@ const GROUP_LABELS: Record<MemberGroup, string> = {
   core_member: "Core Team Members",
 };
 
-export function MembersManager({ initialMembers }: { initialMembers: Member[] }) {
+export function MembersManager({
+  initialMembers,
+  verticalId,
+}: {
+  initialMembers: Member[];
+  verticalId: string;
+}) {
   const [activeTab, setActiveTab] = useState<MemberGroup>("coordinator");
   const [members, setMembers] = useState<Member[]>(initialMembers);
   const [fullName, setFullName] = useState("");
@@ -38,8 +44,9 @@ export function MembersManager({ initialMembers }: { initialMembers: Member[] })
       .from("members")
       .insert({
         full_name: fullName,
-        roll_no: rollNo,
+        roll_no: rollNo.trim() || null,
         group_type: activeTab,
+        vertical_id: verticalId,
       })
       .select()
       .single();
@@ -116,10 +123,9 @@ export function MembersManager({ initialMembers }: { initialMembers: Member[] })
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="label">Roll no</label>
+          <label className="label">Roll no (optional)</label>
           <input
             type="text"
-            required
             value={rollNo}
             onChange={(e) => setRollNo(e.target.value)}
             className="input"
@@ -166,7 +172,7 @@ export function MembersManager({ initialMembers }: { initialMembers: Member[] })
                       }`}
                     />
                   </td>
-                  <td className="py-3 pr-4 font-mono text-xs text-muted">{m.roll_no}</td>
+                  <td className="py-3 pr-4 font-mono text-xs text-muted">{m.roll_no ?? "—"}</td>
                   <td className="py-3 pr-5">
                     <Toggle
                       checked={m.is_active}

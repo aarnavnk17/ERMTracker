@@ -7,7 +7,7 @@ import type { AttendanceStatus, MemberGroup } from "@/lib/types";
 type MemberRow = {
   id: string;
   full_name: string;
-  roll_no: string;
+  roll_no: string | null;
   group_type: MemberGroup;
   status: AttendanceStatus | null;
 };
@@ -93,7 +93,11 @@ export function MeetingAttendance({
     const q = search[activeTab].trim().toLowerCase();
     const f = filter[activeTab];
     return groupRows.filter((r) => {
-      if (q && !r.full_name.toLowerCase().includes(q) && !r.roll_no.toLowerCase().includes(q)) {
+      if (
+        q &&
+        !r.full_name.toLowerCase().includes(q) &&
+        !(r.roll_no ?? "").toLowerCase().includes(q)
+      ) {
         return false;
       }
       if (f === "unmarked") return r.status === null;

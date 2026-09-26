@@ -1,8 +1,9 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/current-profile";
 import { SignOutButton } from "@/components/SignOutButton";
 import { Masthead } from "@/components/Masthead";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { DashboardNav } from "@/components/DashboardNav";
 
 export default async function DashboardLayout({
   children,
@@ -10,43 +11,35 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const profile = await getCurrentProfile(supabase);
+  const { data: verticals } = await supabase
+    .from("verticals")
+    .select("id, name, created_at")
+    .order("name");
 
-  let displayName = user?.email ?? "";
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("display_name")
-      .eq("id", user.id)
-      .single();
-    if (profile?.display_name) displayName = profile.display_name;
-  }
+  const list = verticals ?? [];
+  const verticalName =
+    profile?.role === "vertical_head"
+      ? list.find((v) => v.id === profile.vertical_id)?.name ?? null
+      : null;
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <Masthead />
       <header className="border-b border-ink-800 bg-ink-950">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-4">
-          <div className="flex items-center gap-6">
-            <span className="font-display text-sm font-semibold text-brand-300">
-              Attendance Tracker
-            </span>
-            <nav className="flex items-center gap-1">
-              <Link href="/meetings" className="eyebrow rounded-md px-3 py-1.5 text-brand-300/70 hover:text-brand-300">
-                Meetings
-              </Link>
-              <Link href="/members" className="eyebrow rounded-md px-3 py-1.5 text-brand-300/70 hover:text-brand-300">
-                Members
-              </Link>
-              <Link href="/reports" className="eyebrow rounded-md px-3 py-1.5 text-brand-300/70 hover:text-brand-300">
-                Reports
-              </Link>
-            </nav>
-          </div>
+          {profile && (
+            <DashboardNav
+              role={profile.role}
+              verticals={list}
+              verticalName={verticalName}
+              defaultVerticalId={list[0]?.id ?? ""}
+            />
+          )}
           <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-ink-400 sm:inline">{displayName}</span>
+            <span className="hidden text-sm text-ink-400 sm:inline">
+              {profile?.display_name}
+            </span>
             <ThemeToggle />
             <SignOutButton dark />
           </div>

@@ -1,38 +1,65 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/current-profile";
+import { resolveEffectiveVerticalId } from "@/lib/effective-vertical";
 import { NewMeetingForm } from "./new-meeting-form";
 import { SlotMeter } from "@/components/SlotMeter";
 import { StatusBadge } from "@/components/StatusBadge";
+import { VerticalBadge } from "@/components/VerticalBadge";
 
-export default async function MeetingsPage() {
+export default async function MeetingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ v?: string }>;
+}) {
+  const { v } = await searchParams;
   const supabase = await createClient();
+  const profile = await getCurrentProfile(supabase);
+  const { data: verticals } = await supabase
+    .from("verticals")
+    .select("id, name, created_at")
+    .order("name");
 
-  const [{ data: meetings }, { count: totalActive }, { data: records }] =
-    await Promise.all([
-      supabase
-        .from("meetings")
-        .select("id, date, description")
-        .order("date", { ascending: false })
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("members")
-        .select("id", { count: "exact", head: true })
-        .eq("is_active", true),
-      supabase.from("attendance_records").select("meeting_id"),
-    ]);
+  if (!profile || !verticals) return null;
+  const verticalId = resolveEffectiveVerticalId(profile, verticals, v);
+  const verticalName = verticals.find((ver) => ver.id === verticalId)?.name ?? "";
+
+  const [{ data: meetings }, { count: totalActive }] = await Promise.all([
+    supabase
+      .from("meetings")
+      .select("id, date, description")
+      .eq("vertical_id", verticalId)
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("members")
+      .select("id", { count: "exact", head: true })
+      .eq("vertical_id", verticalId)
+      .eq("is_active", true),
+  ]);
+
+  const total = totalActive ?? 0;
+  const list = meetings ?? [];
+
+  const { data: records } =
+    list.length > 0
+      ? await supabase
+          .from("attendance_records")
+          .select("meeting_id")
+          .in("meeting_id", list.map((m) => m.id))
+      : { data: [] as { meeting_id: string }[] };
 
   const markedCounts = new Map<string, number>();
   for (const r of records ?? []) {
     markedCounts.set(r.meeting_id, (markedCounts.get(r.meeting_id) ?? 0) + 1);
   }
-  const total = totalActive ?? 0;
-  const list = meetings ?? [];
   const fullyMarked = list.filter((m) => (markedCounts.get(m.id) ?? 0) >= total).length;
 
   return (
     <div className="flex flex-col gap-10">
       <div className="max-w-2xl">
-        <p className="eyebrow text-brand-600 dark:text-brand-400">Meetings</p>
+        <VerticalBadge name={verticalName} />
+        <p className="eyebrow mt-4 text-brand-600 dark:text-brand-400">Meetings</p>
         <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight text-balance text-body sm:text-4xl">
           Meeting attendance
         </h1>
@@ -62,7 +89,7 @@ export default async function MeetingsPage() {
         </dl>
       </div>
 
-      <NewMeetingForm />
+      <NewMeetingForm verticalId={verticalId} />
 
       {list.length === 0 ? (
         <div className="card px-6 py-16 text-center">
