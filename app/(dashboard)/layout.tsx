@@ -38,7 +38,7 @@ export default async function DashboardLayout({
         }
       />
       <header className="border-b border-ink-800 bg-ink-950">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-4">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-3 px-5 py-3">
           {profile && (
             <DashboardNav
               role={profile.role}
@@ -48,7 +48,7 @@ export default async function DashboardLayout({
             />
           )}
           <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-ink-400 sm:inline">
+            <span className="hidden text-sm text-ink-400 md:inline">
               {profile?.display_name}
             </span>
             <ThemeToggle />
